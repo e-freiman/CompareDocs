@@ -5,6 +5,13 @@ from sklearn.metrics.pairwise import linear_kernel
 
 print('\n\n### PROCESSING ###')
 
+filter = []
+
+with open('filter.txt','r') as file:
+    for line in file:  
+        for word in line.split():
+            filter.append(word)
+
 traget_doc = ''
 for filename in os.listdir('target_docs'):
     try:
@@ -18,13 +25,27 @@ docs_names = ['TARGET']
 
 for filename in os.listdir('unknown_docs'):
     try:
-        docs.append(textract.process('unknown_docs/' + filename))
-        docs_names.append(filename)
-        print("Processed " + filename)
+        text = textract.process('unknown_docs/' + filename).decode('utf-8')
+        words = text.split()
+        skip = False
+        for keyword in filter:
+            found = False
+            for word in words:
+                if keyword == word:
+                    found = True
+                    break
+            if not found:                
+                print(filename + ' doesn\'t have "' + word + '", skipped')
+                skip = True
+
+        if not skip:
+            docs.append(text)
+            docs_names.append(filename)
+            print("Processed " + filename)
     except:
         print(filename + ' skipped, couldn\'t process')
 
-vectorizer = TfidfVectorizer(stop_words = 'english')
+vectorizer = TfidfVectorizer(use_idf = False)
 vectors = vectorizer.fit_transform(docs)
 
 cosine_similarities = linear_kernel(vectors[0:1], vectors).flatten()
